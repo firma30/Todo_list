@@ -3,18 +3,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:todo_list2/commponents/validator.dart';
 import 'package:todo_list2/models/todomodel.dart';
-import 'package:todo_list2/ppp.dart';
+import 'package:todo_list2/controller/fav_cont.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
+  final FavoriteController favoriteController = Get.put(FavoriteController());
+
+  String searchText = '';
+
   CollectionReference dataToDo =
       FirebaseFirestore.instance.collection('Activity');
 
@@ -287,7 +292,9 @@ class _HomePageState extends State<HomePage> {
                 prefixIcon: const Icon(Icons.search),
               ),
               onChanged: (text) {
-                // Handle search here based on the text entered
+                setState(() {
+                  searchText = text;
+                });
               },
             ),
           ),
@@ -303,13 +310,20 @@ class _HomePageState extends State<HomePage> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Text("Loading");
                 }
-
                 return ListView(
                   padding: const EdgeInsets.all(5),
                   children:
                       snapshot.data!.docs.map((DocumentSnapshot document) {
                     Map<String, dynamic> data =
                         document.data()! as Map<String, dynamic>;
+
+                    // Filter data berdasarkan teks pencarian
+                    if (searchText.isNotEmpty &&
+                        !data['Title']
+                            .toLowerCase()
+                            .contains(searchText.toLowerCase())) {
+                      return Container(); // Jika tidak cocok, tampilkan widget kosong
+                    }
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -329,9 +343,20 @@ class _HomePageState extends State<HomePage> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const IconButton(
-                                  onPressed: null,
-                                  icon: Icon(Icons.favorite_border)),
+                              IconButton(
+                                onPressed: () {
+                                  favoriteController
+                                      .toggleFavorite(); // Memanggil fungsi toggleFavorite dari controller GetX
+                                },
+                                icon: Obx(() {
+                                  return Icon(
+                                    Icons.favorite,
+                                    color: favoriteController.isFavorited.value
+                                        ? Colors.red
+                                        : null,
+                                  );
+                                }),
+                              ),
                               PopupMenuButton(
                                 itemBuilder: (context) {
                                   return [
